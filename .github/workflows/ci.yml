@@ -39,6 +39,17 @@ jobs:
         run: |
           set -euo pipefail
           bash cr8809/prepare.sh 2>&1 | tee prepare.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cr8809-resolved-config-${{ github.run_number }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          path: |
+            work/nss-port/openwrt/.config
+            work/nss-port/openwrt/cr8809-selected-packages.txt
+            work/nss-port/openwrt/cr8809-feeds-lock.json
+      - name: Prepare patched Linux 6.12 sources
+        working-directory: work/nss-port/openwrt
+        run: make target/linux/prepare V=s
       - name: Download build inputs
         working-directory: work/nss-port/openwrt
         run: make -j8 download
@@ -47,7 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          make -j2 V=s 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+          make -j"$(nproc)" V=s 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
       - name: Verify output and record checksums
         working-directory: work/nss-port/openwrt
         shell: bash

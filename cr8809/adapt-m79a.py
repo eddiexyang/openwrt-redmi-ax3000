@@ -32,6 +32,14 @@ def check(tree):
     missing = [key for key in REQUIRED if f'CONFIG_{key}=y' not in config]
     if missing:
         raise RuntimeError('Required configuration lost: ' + ', '.join(missing))
+    selected = sorted(line.split('=', 1)[0].removeprefix('CONFIG_PACKAGE_')
+                      for line in config
+                      if line.startswith('CONFIG_PACKAGE_') and line.endswith(('=y', '=m')))
+    unwanted = [name for name in selected if re.match(
+        r'^(?:lib)?(?:mesa|wayland|graphene|gtk|qt[56]|gstreamer|gst1|sdl[23])', name)]
+    if unwanted:
+        raise RuntimeError('Unexpected desktop/multimedia package selection: ' + ', '.join(unwanted))
+    (tree / 'cr8809-selected-packages.txt').write_text('\n'.join(selected) + '\n')
     if 'KERNEL_PATCHVER:=6.12' not in (tree / 'target/linux/qualcommax/Makefile').read_text():
         raise RuntimeError('Unexpected kernel series')
     print('M79A / Linux 6.12 / NSS / AES configuration verified')
