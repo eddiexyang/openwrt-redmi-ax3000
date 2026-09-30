@@ -15,7 +15,8 @@ REQUIRED = ['TARGET_qualcommax_ipq50xx_DEVICE_xiaomi_cr880x-m79-v1',
             'PACKAGE_kmod-qca-nss-drv', 'PACKAGE_kmod-qca-nss-ecm',
             'PACKAGE_kmod-qca-nss-drv-pppoe', 'ATH11K_NSS_SUPPORT',
             'PACKAGE_MAC80211_NSS_SUPPORT', 'NSS_FIRMWARE_VERSION_12_5',
-            'PACKAGE_openssl-util', 'OPENSSL_WITH_ASM']
+            'PACKAGE_openssl-util', 'OPENSSL_WITH_ASM',
+            'PACKAGE_ipq-wifi-xiaomi_cr880x']
 
 def replace(path, old, new, count=1):
     text = path.read_text()
@@ -32,6 +33,12 @@ def check(tree):
     missing = [key for key in REQUIRED if f'CONFIG_{key}=y' not in config]
     if missing:
         raise RuntimeError('Required configuration lost: ' + ', '.join(missing))
+    wrong_bdf = sorted(line for line in config
+                       if line.startswith('CONFIG_PACKAGE_ipq-wifi-')
+                       and line.endswith('=y')
+                       and line != 'CONFIG_PACKAGE_ipq-wifi-xiaomi_cr880x=y')
+    if wrong_bdf:
+        raise RuntimeError('Wrong board data selected: ' + ', '.join(wrong_bdf))
     selected = sorted(line.split('=', 1)[0].removeprefix('CONFIG_PACKAGE_')
                       for line in config
                       if line.startswith('CONFIG_PACKAGE_') and line.endswith(('=y', '=m')))
@@ -129,7 +136,11 @@ exit 0
         out.write('\nCONFIG_NET_DSA_TAG_QCA_8021Q=y\nCONFIG_CRYPTO_AES_ARM64_CE=y\nCONFIG_CRYPTO_AES_ARM64_CE_BLK=y\nCONFIG_CRYPTO_GHASH_ARM64_CE=y\n')
     config = tree / '.config'
     lines = [line for line in config.read_text().splitlines()
-             if not re.match(r'CONFIG_TARGET_qualcommax_ipq50xx_DEVICE_.*=y$', line)]
+             if not re.match(r'CONFIG_TARGET_qualcommax_ipq50xx_DEVICE_.*=y$', line)
+             and not re.match(r'(?:# )?CONFIG_PACKAGE_ipq-wifi-', line)]
+    # The donor explicitly selects its BDF; leaving it at y demotes our
+    # conflicting board package to m, excluding M79A's data from the image.
+    lines += ['# CONFIG_PACKAGE_ipq-wifi-xiaomi_mi-router-ax3000t-v2 is not set']
     lines += [f'CONFIG_{key}=y' for key in REQUIRED]
     lines += ['CONFIG_PACKAGE_iperf3=y', 'CONFIG_PACKAGE_ethtool=y',
               'CONFIG_PACKAGE_kmod-crypto-user=y', 'CONFIG_TARGET_ROOTFS_INITRAMFS=y']
