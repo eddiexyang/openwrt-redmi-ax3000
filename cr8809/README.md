@@ -39,10 +39,7 @@ Using zero would trigger the 60-second fallback, so the kernel timer remains
 nonzero. Invalid/disabled-channel checks are retained. This deliberately
 removes normal radar-triggered channel avoidance on M79A; hardware behavior
 still needs validation. Other board compatibles keep upstream behavior.
-Ath11k scan initialization sets `probe_delay` to zero on M79A (upstream: 5 ms).
-This value is forwarded in the WMI scan-start command. It affects hardware
-scanning across channel widths; it is not a separate HE160 startup timer.
-No bridge timing configuration is changed.
+The ath11k scan probe delay and bridge timing retain their original behavior.
 
 - Startup: hostapd requests `NL80211_CMD_RADAR_DETECT`;
   `nl80211_start_radar_detection()` obtains the CAC interval through
