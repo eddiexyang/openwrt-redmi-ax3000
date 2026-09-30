@@ -42,7 +42,17 @@ marks the channel unavailable or cancels CAC.
  
 --- a/drivers/net/wireless/ath/ath11k/wmi.c
 +++ b/drivers/net/wireless/ath/ath11k/wmi.c
-@@ -8402,7 +8402,8 @@
+@@ -2142,7 +2142,8 @@
+ 	arg->probe_spacing_time = 0;
+ 	arg->idle_time = 0;
+ 	arg->max_scan_time = 20000;
+-	arg->probe_delay = 5;
++	arg->probe_delay =
++		of_machine_is_compatible("xiaomi,cr880x-m79-v1") ? 0 : 5;
+ 	arg->notify_scan_events = WMI_SCAN_EVENT_STARTED |
+ 				  WMI_SCAN_EVENT_COMPLETED |
+ 				  WMI_SCAN_EVENT_BSS_CHANNEL |
+@@ -8402,7 +8403,8 @@
  	ath11k_dbg(ar->ab, ATH11K_DBG_REG, "DFS Radar Detected in pdev %d\n",
  		   ev->pdev_id);
  
