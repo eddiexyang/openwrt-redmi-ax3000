@@ -28,10 +28,34 @@ alone does not authorize or validate a NAND flash. First use an appropriate RAM
 boot/recovery procedure, then verify LAN/WAN separation, NSS counters under NAT
 and Wi-Fi traffic, HE160 operation and AES accelerated versus software benchmarks.
 
-DFS/CAC behavior has not been modified. `forward_delay` is a Linux bridge/STP
-parameter; it does not control wireless CAC. The prior 5.4 source trace found
-hostapd -> nl80211 radar detection -> driver/firmware -> nl80211 DFS events ->
-hostapd channel switching. The corresponding 6.12 path remains to be audited.
+## DFS call chain
+
+The selected system kernel is 6.12.94; its wireless package is backports
+6.18.26 (as pinned by the NSS integration). These versions are separate.
+DFS/CAC behavior has not yet been changed in this port.
+
+- Startup: hostapd requests `NL80211_CMD_RADAR_DETECT`;
+  `nl80211_start_radar_detection()` obtains the CAC interval through
+  `cfg80211_chandef_dfs_cac_time()` and falls back to
+  `IEEE80211_DFS_MIN_CAC_TIME_MS` when it is zero.
+- mac80211 `ieee80211_start_radar_detection()` queues the delayed
+  `dfs_cac_timer_work`; `ieee80211_dfs_cac_timer_work()` emits
+  `NL80211_RADAR_CAC_FINISHED` through `cfg80211_cac_event()`.
+- Firmware event: ath11k
+  `ath11k_wmi_pdev_dfs_radar_detected_event()` calls
+  `ieee80211_radar_detected()` unless `ar->dfs_block_radar_events` is set.
+  The flag has an existing ath11k debugfs control.
+- mac80211 radar work cancels CAC and calls `cfg80211_radar_event()`;
+  the resulting nl80211 event reaches hostapd's DFS event handler and
+  channel-switch logic. Dropping the hostapd event alone leaves the earlier
+  driver/kernel work in place.
+- `forward_delay` travels through netifd's bridge configuration to
+  `/sys/class/net/<bridge>/bridge/forward_delay`. It is an STP bridge timer
+  with no call into the wireless CAC timer.
+
+Sources: `package/kernel/mac80211/Makefile` in the pinned ADCDS overlay,
+Linux stable v6.18.26 `net/wireless/nl80211.c`, `net/mac80211/cfg.c`,
+`net/mac80211/mlme.c`, `net/mac80211/util.c`, and ath11k `wmi.c` / `debugfs.c`.
 
 ## Sources
 

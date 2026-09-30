@@ -60,13 +60,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cr8809-m79a-6.12-experimental-${{ github.run_number }}
+          name: cr8809-m79a-6.12-experimental-${{ github.run_number }}-${{ github.run_attempt }}
           retention-days: 14
+          include-hidden-files: true
           if-no-files-found: error
           path: |
             prepare.log
             build.log
             work/nss-port/openwrt/.config
+            work/nss-port/openwrt/cr8809-feeds-lock.json
             work/nss-port/openwrt/cr8809-provenance.json
             work/nss-port/openwrt/cr8809.config.buildinfo
             work/nss-port/openwrt/bin/targets/qualcommax/ipq50xx/*cr880x-m79-v1*
