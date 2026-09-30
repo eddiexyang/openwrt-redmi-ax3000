@@ -32,7 +32,14 @@ and Wi-Fi traffic, HE160 operation and AES accelerated versus software benchmark
 
 The selected system kernel is 6.12.94; its wireless package is backports
 6.18.26 (as pinned by the NSS integration). These versions are separate.
-DFS/CAC behavior has not yet been changed in this port.
+The requested behavior is restricted to `xiaomi,cr880x-m79-v1`:
+`999-9999-cr8809-dfs-policy.patch` changes a valid, nonzero CAC interval to
+1 ms and suppresses radar notifications at ath11k's existing event gate.
+Using zero would trigger the 60-second fallback, so the kernel timer remains
+nonzero. Invalid/disabled-channel checks are retained. This deliberately
+removes normal radar-triggered channel avoidance on M79A; hardware behavior
+still needs validation. Other board compatibles keep upstream behavior.
+The first-boot UCI hook also sets bridge `forward_delay` to zero.
 
 - Startup: hostapd requests `NL80211_CMD_RADAR_DETECT`;
   `nl80211_start_radar_detection()` obtains the CAC interval through

@@ -121,8 +121,27 @@ for knob in general/redirect ipv4cfg/ipv4_accel_mode ipv6cfg/ipv6_accel_mode; do
 done
 exit 0
 ''')
+    bridge_defaults = tree / 'files/etc/uci-defaults/99-cr8809-bridge-delay'
+    bridge_defaults.parent.mkdir(parents=True, exist_ok=True)
+    bridge_defaults.write_text('''#!/bin/sh
+. /lib/functions.sh
+[ "$(board_name)" = "xiaomi,cr880x-m79-v1" ] || exit 0
+cr8809_zero_bridge_delay() {
+    local device_type
+    config_get device_type "$1" type
+    [ "$device_type" = bridge ] || return 0
+    uci set "network.$1.forward_delay=0"
+}
+config_load network
+config_foreach cr8809_zero_bridge_delay device
+uci commit network
+exit 0
+''')
+    bridge_defaults.chmod(0o755)
     shutil.copy2(HERE / 'patches/761-net-dsa-qca8k-8021q-linux-6.12.patch',
                  target / 'patches-6.12/999-2800-cr8809-qca8k-8021q.patch')
+    shutil.copy2(HERE / 'patches/999-9999-cr8809-dfs-policy.patch',
+                 tree / 'package/kernel/mac80211/patches/nss/mesh/999-9999-cr8809-dfs-policy.patch')
     with (target / 'config-6.12').open('a') as out:
         out.write('\nCONFIG_NET_DSA_TAG_QCA_8021Q=y\nCONFIG_CRYPTO_AES_ARM64_CE=y\nCONFIG_CRYPTO_AES_ARM64_CE_BLK=y\nCONFIG_CRYPTO_GHASH_ARM64_CE=y\n')
     config = tree / '.config'

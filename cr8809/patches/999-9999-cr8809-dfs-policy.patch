@@ -1,0 +1,54 @@
+Subject: [PATCH] wireless: apply requested CR8809 M79A CAC and radar policy
+
+Scope this behavior to xiaomi,cr880x-m79-v1. Keep invalid-channel
+checks and apply the shortened CAC interval consistently through cfg80211.
+Radar events are suppressed at the ath11k dispatch point before mac80211
+marks the channel unavailable or cancels CAC.
+
+--- a/net/wireless/chan.c
++++ b/net/wireless/chan.c
+@@ -10,6 +10,7 @@
+  */
+ 
+ #include <linux/export.h>
++#include <linux/of.h>
+ #include <linux/bitfield.h>
+ #include <net/cfg80211.h>
+ #include "core.h"
+@@ -1036,6 +1037,7 @@
+ 	struct ieee80211_channel *c;
+ 	int width;
+ 	unsigned int t1 = 0, t2 = 0;
++	bool short_cac = of_machine_is_compatible("xiaomi,cr880x-m79-v1");
+ 
+ 	if (WARN_ON(!cfg80211_chandef_valid(chandef)))
+ 		return 0;
+@@ -1068,12 +1070,12 @@
+ 		return 0;
+ 
+ 	if (t1 == INT_MAX)
+-		return t2;
++		return short_cac && t2 ? 1 : t2;
+ 
+ 	if (t2 == INT_MAX)
+-		return t1;
+-
+-	return max(t1, t2);
++		return short_cac && t1 ? 1 : t1;
++
++	return short_cac && max(t1, t2) ? 1 : max(t1, t2);
+ }
+ EXPORT_SYMBOL(cfg80211_chandef_dfs_cac_time);
+ 
+--- a/drivers/net/wireless/ath/ath11k/wmi.c
++++ b/drivers/net/wireless/ath/ath11k/wmi.c
+@@ -8402,7 +8402,8 @@
+ 	ath11k_dbg(ar->ab, ATH11K_DBG_REG, "DFS Radar Detected in pdev %d\n",
+ 		   ev->pdev_id);
+ 
+-	if (ar->dfs_block_radar_events)
++	if (ar->dfs_block_radar_events ||
++	    of_machine_is_compatible("xiaomi,cr880x-m79-v1"))
+ 		ath11k_info(ab, "DFS Radar detected, but ignored as requested\n");
+ 	else
+ 		ieee80211_radar_detected(ar->hw, NULL);
