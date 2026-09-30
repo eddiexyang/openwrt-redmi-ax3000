@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import shutil
 import urllib.request
+from stock_layout import adapt_stock_layout
 
 BOARD_REV = '25b90764ae9bf7cf43cb57229b98bf2211795b84'
 BOARD_URL = 'https://raw.githubusercontent.com/ByteArray0/immortalwrt-device-expand/' + BOARD_REV + '/'
@@ -52,6 +53,7 @@ def check(tree):
     print('M79A / Linux 6.12 / NSS / AES configuration verified')
 
 def adapt(tree):
+    adapt_stock_layout(tree)
     target = tree / 'target/linux/qualcommax'
     provenance = {}
     for name in ['ipq5018-cr880x-common.dtsi', 'ipq5018-cr880x.dtsi', 'ipq5018-cr880x-m79-v1.dts']:
